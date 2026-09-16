@@ -1,1 +1,4 @@
 pip install requests
+
+earthquake-monitor/ ├── main.py ├── usgs.py └── ui.py import tkinter as tk
+pip install -r requirements.txt
