@@ -5,46 +5,49 @@ import json
 import os
 import threading
 
-from usgs import fetch_earthquakes
-
 
 class EarthquakeMonitor:
 
-    def __init__(
-        self,
-        root,
-        on_update_finished=None
-    ):
+    def __init__(self, root, on_update_finished=None):
 
         self.root = root
+        self.on_update_finished = on_update_finished
 
-        self.on_update_finished = (
-            on_update_finished
-        )
+        # =====================================================
+        # WINDOW
+        # =====================================================
 
-        self.root.title(
-            "EARTHQUAKE MONITOR"
-        )
+        self.root.title("EARTHQUAKE MONITOR")
+        self.root.geometry("1100x700")
+        self.root.resizable(False, False)
+        self.root.configure(bg="#080808")
 
-        self.root.geometry(
-            "1000x650"
-        )
+        # =====================================================
+        # COLORS
+        # =====================================================
 
-        self.root.minsize(
-            900,
-            600
-        )
+        self.bg = "#080808"
+        self.panel = "#111111"
+        self.panel_light = "#171717"
+        self.border = "#252525"
+
+        self.white = "#f5f5f5"
+        self.gray = "#8c8c8c"
+        self.gray_light = "#bdbdbd"
+
+        self.green = "#20c96b"
+        self.red = "#ff3b3b"
+
+        self.yellow = "#e5c04a"
+        self.orange = "#f08a3c"
+        self.red_mag = "#ff4545"
 
         # =====================================================
         # DATA
         # =====================================================
 
         self.earthquakes = []
-
-        self.known_ids = set()
-
         self.first_load = True
-
         self.ticker_after_id = None
 
         # =====================================================
@@ -83,81 +86,325 @@ class EarthquakeMonitor:
         )
 
         # =====================================================
-        # HEADER
+        # STYLE
         # =====================================================
 
-        header = tk.Frame(
+        self.setup_styles()
+
+        # =====================================================
+        # MAIN
+        # =====================================================
+
+        self.main = tk.Frame(
             root,
-            bg="#111111",
-            height=90
+            bg=self.bg
+        )
+
+        self.main.pack(
+            fill="both",
+            expand=True,
+            padx=24,
+            pady=22
+        )
+
+        self.create_header()
+        self.create_filter_panel(countries)
+        self.create_table()
+        self.create_footer()
+
+    # =========================================================
+    # STYLES
+    # =========================================================
+
+    def setup_styles(self):
+
+        style = ttk.Style()
+
+        style.theme_use("clam")
+
+        # =====================================================
+        # COMBOBOX
+        # =====================================================
+
+        style.configure(
+            "Modern.TCombobox",
+            background=self.panel_light,
+            foreground=self.white,
+            fieldbackground=self.panel_light,
+            bordercolor=self.border,
+            lightcolor=self.border,
+            darkcolor=self.border,
+            arrowcolor=self.gray_light,
+            relief="flat",
+            borderwidth=1,
+            padding=7
+        )
+
+        style.map(
+            "Modern.TCombobox",
+
+            background=[
+                ("readonly", self.panel_light),
+                ("active", self.panel_light),
+                ("pressed", self.panel_light),
+                ("focus", self.panel_light)
+            ],
+
+            foreground=[
+                ("readonly", self.white),
+                ("focus", self.white)
+            ],
+
+            fieldbackground=[
+                ("readonly", self.panel_light),
+                ("active", self.panel_light),
+                ("pressed", self.panel_light),
+                ("focus", self.panel_light)
+            ],
+
+            bordercolor=[
+                ("readonly", self.border),
+                ("active", self.border),
+                ("pressed", self.border),
+                ("focus", self.border)
+            ],
+
+            lightcolor=[
+                ("readonly", self.border),
+                ("active", self.border),
+                ("pressed", self.border),
+                ("focus", self.border)
+            ],
+
+            darkcolor=[
+                ("readonly", self.border),
+                ("active", self.border),
+                ("pressed", self.border),
+                ("focus", self.border)
+            ],
+
+            arrowcolor=[
+                ("readonly", self.gray_light),
+                ("active", self.gray_light),
+                ("pressed", self.gray_light),
+                ("focus", self.gray_light)
+            ]
+        )
+
+        # =====================================================
+        # TREEVIEW
+        # =====================================================
+
+        style.configure(
+            "Modern.Treeview",
+            background=self.panel,
+            foreground=self.gray_light,
+            fieldbackground=self.panel,
+            borderwidth=0,
+            relief="flat",
+            rowheight=36,
+            font=("Arial", 9)
+        )
+
+        style.configure(
+            "Modern.Treeview.Heading",
+            background=self.panel_light,
+            foreground=self.gray_light,
+            borderwidth=0,
+            relief="flat",
+            font=("Arial", 9, "bold"),
+            padding=(8, 10)
+        )
+
+        style.map(
+            "Modern.Treeview",
+
+            background=[
+                ("selected", "#202020"),
+                ("focus", self.panel)
+            ],
+
+            foreground=[
+                ("selected", self.white),
+                ("focus", self.gray_light)
+            ]
+        )
+
+        # =====================================================
+        # SCROLLBAR
+        # =====================================================
+
+        style.configure(
+            "Modern.Vertical.TScrollbar",
+            background="#202020",
+            troughcolor="#0d0d0d",
+            bordercolor="#0d0d0d",
+            arrowcolor="#888888",
+            relief="flat"
+        )
+
+    # =========================================================
+    # HEADER
+    # =========================================================
+
+    def create_header(self):
+
+        header = tk.Frame(
+            self.main,
+            bg=self.bg
         )
 
         header.pack(
-            fill="x"
+            fill="x",
+            pady=(0, 22)
         )
 
-        header.pack_propagate(
-            False
-        )
+        # -----------------------------------------------------
+        # TITLE
+        # -----------------------------------------------------
 
-        title = tk.Label(
+        title_frame = tk.Frame(
             header,
-            text="EARTHQUAKE MONITOR",
-            font=("Arial", 22, "bold"),
-            fg="white",
-            bg="#111111"
+            bg=self.bg
+        )
+
+        title_frame.pack(
+            side="left"
+        )
+
+        title = tk.Frame(
+            title_frame,
+            bg=self.bg
         )
 
         title.pack(
-            anchor="w",
-            padx=25,
-            pady=(18, 0)
+            anchor="w"
         )
 
-        subtitle = tk.Label(
-            header,
+        tk.Label(
+            title,
+            text="EARTHQUAKE",
+            font=("Arial", 25, "bold"),
+            fg=self.white,
+            bg=self.bg
+        ).pack(
+            side="left"
+        )
+
+        tk.Label(
+            title,
+            text=" MONITOR",
+            font=("Arial", 25, "bold"),
+            fg=self.gray,
+            bg=self.bg
+        ).pack(
+            side="left"
+        )
+
+        tk.Label(
+            title_frame,
             text="Real-time earthquake monitoring",
-            font=("Arial", 10),
-            fg="#aaaaaa",
-            bg="#111111"
-        )
-
-        subtitle.pack(
+            font=("Arial", 9),
+            fg=self.gray,
+            bg=self.bg
+        ).pack(
             anchor="w",
-            padx=27
+            pady=(4, 0)
         )
 
-        # =====================================================
-        # FILTER BAR
-        # =====================================================
+        # -----------------------------------------------------
+        # STATUS
+        # -----------------------------------------------------
 
-        filter_frame = tk.Frame(
-            root,
-            bg="#f2f2f2",
-            height=70
+        status = tk.Frame(
+            header,
+            bg=self.bg
         )
 
-        filter_frame.pack(
-            fill="x"
+        status.pack(
+            side="right",
+            anchor="n"
         )
 
-        filter_frame.pack_propagate(
-            False
+        self.live_label = tk.Label(
+            status,
+            text="● LIVE",
+            font=("Arial", 10, "bold"),
+            fg=self.red,
+            bg=self.bg
+        )
+
+        self.live_label.pack(
+            anchor="e"
+        )
+
+        self.last_update_label = tk.Label(
+            status,
+            text="Last update: --:--:--",
+            font=("Arial", 8),
+            fg=self.gray,
+            bg=self.bg
+        )
+
+        self.last_update_label.pack(
+            anchor="e",
+            pady=(5, 0)
+        )
+
+    # =========================================================
+    # FILTER PANEL
+    # =========================================================
+
+    def create_filter_panel(self, countries):
+
+        panel = tk.Frame(
+            self.main,
+            bg=self.panel,
+            highlightbackground=self.border,
+            highlightcolor=self.border,
+            highlightthickness=1,
+            bd=0
+        )
+
+        panel.pack(
+            fill="x",
+            pady=(0, 15)
+        )
+
+        inner = tk.Frame(
+            panel,
+            bg=self.panel
+        )
+
+        inner.pack(
+            fill="x",
+            padx=16,
+            pady=14
         )
 
         # =====================================================
         # COUNTRY
         # =====================================================
 
-        tk.Label(
-            filter_frame,
-            text="Country",
-            font=("Arial", 10, "bold"),
-            bg="#f2f2f2",
-            fg="#222222"
-        ).pack(
+        country_box = tk.Frame(
+            inner,
+            bg=self.panel
+        )
+
+        country_box.pack(
             side="left",
-            padx=(25, 8)
+            padx=(0, 18)
+        )
+
+        tk.Label(
+            country_box,
+            text="COUNTRY",
+            font=("Arial", 8, "bold"),
+            fg=self.gray,
+            bg=self.panel
+        ).pack(
+            anchor="w",
+            pady=(0, 5)
         )
 
         self.country_var = tk.StringVar(
@@ -165,36 +412,44 @@ class EarthquakeMonitor:
         )
 
         self.country_combo = ttk.Combobox(
-            filter_frame,
+            country_box,
             textvariable=self.country_var,
             values=countries,
             state="readonly",
-            width=22
+            width=20,
+            style="Modern.TCombobox"
         )
 
-        self.country_combo.pack(
-            side="left",
-            padx=(0, 25)
-        )
+        self.country_combo.pack()
 
         self.country_combo.bind(
             "<<ComboboxSelected>>",
-            lambda event: self.update_table()
+            self.on_filter_changed
         )
 
         # =====================================================
         # PERIOD
         # =====================================================
 
-        tk.Label(
-            filter_frame,
-            text="Period",
-            font=("Arial", 10, "bold"),
-            bg="#f2f2f2",
-            fg="#222222"
-        ).pack(
+        period_box = tk.Frame(
+            inner,
+            bg=self.panel
+        )
+
+        period_box.pack(
             side="left",
-            padx=(0, 8)
+            padx=(0, 18)
+        )
+
+        tk.Label(
+            period_box,
+            text="PERIOD",
+            font=("Arial", 8, "bold"),
+            fg=self.gray,
+            bg=self.panel
+        ).pack(
+            anchor="w",
+            pady=(0, 5)
         )
 
         self.period_var = tk.StringVar(
@@ -202,7 +457,7 @@ class EarthquakeMonitor:
         )
 
         self.period_combo = ttk.Combobox(
-            filter_frame,
+            period_box,
             textvariable=self.period_var,
             values=[
                 "1 HOUR",
@@ -211,32 +466,39 @@ class EarthquakeMonitor:
                 "30 DAYS"
             ],
             state="readonly",
-            width=12
+            width=12,
+            style="Modern.TCombobox"
         )
 
-        self.period_combo.pack(
-            side="left",
-            padx=(0, 20)
-        )
+        self.period_combo.pack()
 
         self.period_combo.bind(
             "<<ComboboxSelected>>",
-            lambda event: self.update_table()
+            self.on_filter_changed
         )
 
         # =====================================================
         # MAGNITUDE
         # =====================================================
 
+        magnitude_box = tk.Frame(
+            inner,
+            bg=self.panel
+        )
+
+        magnitude_box.pack(
+            side="left"
+        )
+
         tk.Label(
-            filter_frame,
-            text="Magnitude",
-            font=("Arial", 10, "bold"),
-            bg="#f2f2f2",
-            fg="#222222"
+            magnitude_box,
+            text="MAGNITUDE",
+            font=("Arial", 8, "bold"),
+            fg=self.gray,
+            bg=self.panel
         ).pack(
-            side="left",
-            padx=(0, 8)
+            anchor="w",
+            pady=(0, 5)
         )
 
         self.magnitude_var = tk.StringVar(
@@ -244,7 +506,7 @@ class EarthquakeMonitor:
         )
 
         self.magnitude_combo = ttk.Combobox(
-            filter_frame,
+            magnitude_box,
             textvariable=self.magnitude_var,
             values=[
                 "ALL",
@@ -254,72 +516,117 @@ class EarthquakeMonitor:
                 "MAJOR"
             ],
             state="readonly",
-            width=12
+            width=12,
+            style="Modern.TCombobox"
         )
 
-        self.magnitude_combo.pack(
-            side="left",
-            padx=(0, 15)
-        )
+        self.magnitude_combo.pack()
 
         self.magnitude_combo.bind(
             "<<ComboboxSelected>>",
-            lambda event: self.update_table()
+            self.on_filter_changed
         )
 
         # =====================================================
-        # LIVE + LAST UPDATE
+        # UPDATE BUTTON
         # =====================================================
 
-        status_frame = tk.Frame(
-            filter_frame,
-            bg="#f2f2f2"
+        self.update_button = tk.Button(
+            inner,
+            text="UPDATE",
+            command=self.manual_update,
+            bg=self.green,
+            fg="#050505",
+            activebackground="#28e878",
+            activeforeground="#050505",
+            font=("Arial", 9, "bold"),
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            padx=20,
+            pady=9
         )
 
-        status_frame.pack(
+        self.update_button.pack(
             side="right",
-            padx=25
+            padx=(20, 0)
         )
 
-        self.live_label = tk.Label(
-            status_frame,
-            text="● LIVE",
-            font=("Arial", 10, "bold"),
-            fg="red",
-            bg="#f2f2f2"
+    # =========================================================
+    # FILTER CHANGE
+    # =========================================================
+
+    def on_filter_changed(self, event=None):
+
+        self.update_table()
+
+        # Remove keyboard focus from the Combobox
+        # so the selected text does not look highlighted.
+        self.root.focus_set()
+
+    # =========================================================
+    # TABLE
+    # =========================================================
+
+    def create_table(self):
+
+        table_container = tk.Frame(
+            self.main,
+            bg=self.panel,
+            highlightbackground=self.border,
+            highlightcolor=self.border,
+            highlightthickness=1,
+            bd=0
         )
 
-        self.live_label.pack(
+        table_container.pack(
+            fill="both",
+            expand=True
+        )
+
+        # -----------------------------------------------------
+        # TABLE HEADER
+        # -----------------------------------------------------
+
+        table_header = tk.Frame(
+            table_container,
+            bg=self.panel_light,
+            height=42
+        )
+
+        table_header.pack(
+            fill="x"
+        )
+
+        table_header.pack_propagate(
+            False
+        )
+
+        tk.Label(
+            table_header,
+            text="EARTHQUAKE EVENTS",
+            font=("Arial", 9, "bold"),
+            fg=self.white,
+            bg=self.panel_light
+        ).pack(
             side="left",
-            padx=(0, 15)
+            padx=14
         )
 
-        self.last_update_label = tk.Label(
-            status_frame,
-            text="Last update: --:--:--",
-            font=("Arial", 10),
-            fg="#555555",
-            bg="#f2f2f2"
-        )
-
-        self.last_update_label.pack(
-            side="left"
-        )
-
-        # =====================================================
-        # TABLE
-        # =====================================================
+        # -----------------------------------------------------
+        # TABLE FRAME
+        # -----------------------------------------------------
 
         table_frame = tk.Frame(
-            root,
-            bg="white"
+            table_container,
+            bg=self.panel
         )
 
         table_frame.pack(
             fill="both",
             expand=True,
-            padx=20,
-            pady=(15, 10)
+            padx=8,
+            pady=8
         )
 
         columns = (
@@ -332,49 +639,55 @@ class EarthquakeMonitor:
         self.tree = ttk.Treeview(
             table_frame,
             columns=columns,
-            show="headings"
+            show="headings",
+            style="Modern.Treeview",
+            height=8
         )
 
         self.tree.heading(
             "magnitude",
-            text="Magnitude"
+            text="MAGNITUDE"
         )
 
         self.tree.heading(
             "location",
-            text="Location"
+            text="LOCATION"
         )
 
         self.tree.heading(
             "depth",
-            text="Depth (km)"
+            text="DEPTH (KM)"
         )
 
         self.tree.heading(
             "time",
-            text="Time"
+            text="TIME"
         )
 
         self.tree.column(
             "magnitude",
             width=90,
+            minwidth=70,
             anchor="center"
         )
 
         self.tree.column(
             "location",
-            width=150
+            width=220,
+            minwidth=150
         )
 
         self.tree.column(
             "depth",
-            width=50,
+            width=75,
+            minwidth=60,
             anchor="center"
         )
 
         self.tree.column(
             "time",
-            width=80,
+            width=140,
+            minwidth=110,
             anchor="center"
         )
 
@@ -384,22 +697,22 @@ class EarthquakeMonitor:
 
         self.tree.tag_configure(
             "magnitude_yellow",
-            foreground="#d4a500"
+            foreground=self.yellow
         )
 
         self.tree.tag_configure(
             "magnitude_orange",
-            foreground="#e67e22"
+            foreground=self.orange
         )
 
         self.tree.tag_configure(
             "magnitude_red",
-            foreground="#e00000"
+            foreground=self.red_mag
         )
 
         self.tree.tag_configure(
             "normal",
-            foreground="#222222"
+            foreground=self.gray_light
         )
 
         # =====================================================
@@ -409,7 +722,8 @@ class EarthquakeMonitor:
         scrollbar = ttk.Scrollbar(
             table_frame,
             orient="vertical",
-            command=self.tree.yview
+            command=self.tree.yview,
+            style="Modern.Vertical.TScrollbar"
         )
 
         self.tree.configure(
@@ -427,68 +741,45 @@ class EarthquakeMonitor:
             fill="y"
         )
 
-        # =====================================================
-        # BOTTOM BAR
-        # =====================================================
+    # =========================================================
+    # FOOTER
+    # =========================================================
 
-        bottom_frame = tk.Frame(
-            root,
-            bg="#eeeeee",
-            height=42
+    def create_footer(self):
+
+        footer = tk.Frame(
+            self.main,
+            bg=self.bg
         )
 
-        bottom_frame.pack(
+        footer.pack(
             fill="x",
-            side="bottom"
+            pady=(12, 0)
         )
-
-        bottom_frame.pack_propagate(
-            False
-        )
-
-        # =====================================================
-        # UPDATE BUTTON
-        # =====================================================
-
-        self.update_button = tk.Button(
-            bottom_frame,
-            text="UPDATE",
-            command=self.manual_update,
-            bg="#28a745",
-            fg="white",
-            activebackground="#218838",
-            activeforeground="white",
-            font=("Arial", 9, "bold"),
-            relief="flat",
-            cursor="hand2",
-            padx=12,
-            pady=3
-        )
-
-        self.update_button.pack(
-            side="left",
-            padx=(12, 10),
-            pady=7
-        )
-
-        # =====================================================
-        # TICKER
-        # =====================================================
 
         self.ticker = tk.Label(
-            bottom_frame,
+            footer,
             text="Waiting for earthquake data...",
-            font=("Arial", 10),
-            fg="#555555",
-            bg="#eeeeee",
-            anchor="w",
-            padx=0
+            font=("Arial", 9),
+            fg=self.gray,
+            bg=self.bg,
+            anchor="w"
         )
 
         self.ticker.pack(
             side="left",
-            fill="both",
+            fill="x",
             expand=True
+        )
+
+        tk.Label(
+            footer,
+            text="SOURCE  USGS",
+            font=("Arial", 8, "bold"),
+            fg="#555555",
+            bg=self.bg
+        ).pack(
+            side="right"
         )
 
     # =========================================================
@@ -497,18 +788,19 @@ class EarthquakeMonitor:
 
     def manual_update(self):
 
-        self.period_var.set(
-            "1 DAY"
-        )
+        # IMPORTANT:
+        # Do NOT change any filter here.
+        # Country, Period and Magnitude stay exactly
+        # as selected by the user.
 
         self.live_label.config(
             text="● UPDATING",
-            fg="red"
+            fg=self.red
         )
 
         self.ticker.config(
             text="Fetching latest earthquake data...",
-            fg="#555555"
+            fg=self.gray
         )
 
         self.update_button.config(
@@ -517,14 +809,31 @@ class EarthquakeMonitor:
 
         def worker():
 
-            earthquakes = fetch_earthquakes()
+            try:
 
-            self.root.after(
-                0,
-                lambda: self.finish_manual_update(
-                    earthquakes
+                from usgs import fetch_earthquakes
+
+                earthquakes = fetch_earthquakes()
+
+                self.root.after(
+                    0,
+                    lambda: self.finish_manual_update(
+                        earthquakes
+                    )
                 )
-            )
+
+            except Exception as error:
+
+                self.root.after(
+                    0,
+                    lambda: self.finish_manual_update(
+                        []
+                    )
+                )
+
+                print(
+                    f"Update error: {error}"
+                )
 
         threading.Thread(
             target=worker,
@@ -565,12 +874,12 @@ class EarthquakeMonitor:
 
             self.ticker.config(
                 text="Unable to retrieve earthquake data.",
-                fg="#555555"
+                fg=self.gray
             )
 
             self.live_label.config(
                 text="● OFFLINE",
-                fg="red"
+                fg=self.red
             )
 
             self.update_button.config(
@@ -580,7 +889,7 @@ class EarthquakeMonitor:
             return
 
         # =====================================================
-        # CANCEL OLD TICKER TIMER
+        # CANCEL OLD TICKER
         # =====================================================
 
         if self.ticker_after_id is not None:
@@ -610,68 +919,38 @@ class EarthquakeMonitor:
         )
 
         # =====================================================
-        # FIRST LOAD
+        # STORE DATA
         # =====================================================
 
-        if self.first_load:
-
-            self.earthquakes = earthquakes
-
-            for earthquake in earthquakes:
-
-                self.known_ids.add(
-                    earthquake["id"]
-                )
-
-            self.first_load = False
-
-            self.update_table()
-
-            self.show_latest_earthquake()
+        self.earthquakes = earthquakes
 
         # =====================================================
-        # NORMAL UPDATE
+        # UPDATE TABLE USING CURRENT FILTERS
         # =====================================================
 
-        else:
-
-            new_events = []
-
-            for earthquake in earthquakes:
-
-                earthquake_id = earthquake["id"]
-
-                if earthquake_id not in self.known_ids:
-
-                    new_events.append(
-                        earthquake
-                    )
-
-                    self.known_ids.add(
-                        earthquake_id
-                    )
-
-            self.earthquakes = earthquakes
-
-            self.update_table()
-
-            self.ticker.config(
-                text="Updated successfully.",
-                fg="#555555"
-            )
-
-            self.ticker_after_id = self.root.after(
-                3000,
-                self.show_latest_earthquake
-            )
+        self.update_table()
 
         # =====================================================
-        # LIVE STATUS
+        # TICKER
+        # =====================================================
+
+        self.ticker.config(
+            text="Updated successfully.",
+            fg=self.gray
+        )
+
+        self.ticker_after_id = self.root.after(
+            3000,
+            self.show_latest_earthquake
+        )
+
+        # =====================================================
+        # LIVE
         # =====================================================
 
         self.live_label.config(
             text="● LIVE",
-            fg="red"
+            fg=self.red
         )
 
         self.update_button.config(
@@ -679,7 +958,7 @@ class EarthquakeMonitor:
         )
 
     # =========================================================
-    # SHOW LATEST EARTHQUAKE
+    # LATEST EARTHQUAKE
     # =========================================================
 
     def show_latest_earthquake(self):
@@ -687,6 +966,7 @@ class EarthquakeMonitor:
         self.ticker_after_id = None
 
         if not self.earthquakes:
+
             return
 
         latest = max(
@@ -720,7 +1000,7 @@ class EarthquakeMonitor:
                 f"{latest['location']} - "
                 f"{formatted_time}"
             ),
-            fg="#555555"
+            fg=self.gray
         )
 
     # =========================================================
@@ -734,9 +1014,11 @@ class EarthquakeMonitor:
     ):
 
         if selected == "ALL":
+
             return True
 
         if magnitude is None:
+
             return False
 
         if selected == "LOW":
@@ -758,7 +1040,7 @@ class EarthquakeMonitor:
         return True
 
     # =========================================================
-    # MAGNITUDE COLOR
+    # MAGNITUDE TAG
     # =========================================================
 
     def get_magnitude_tag(
@@ -767,6 +1049,7 @@ class EarthquakeMonitor:
     ):
 
         if magnitude is None:
+
             return "normal"
 
         if magnitude >= 7.0:
@@ -789,23 +1072,27 @@ class EarthquakeMonitor:
 
     def update_table(self):
 
+        # -----------------------------------------------------
+        # CLEAR TABLE
+        # -----------------------------------------------------
+
         for item in self.tree.get_children():
 
             self.tree.delete(
                 item
             )
 
+        # -----------------------------------------------------
+        # CURRENT FILTERS
+        # -----------------------------------------------------
+
         now = datetime.now(
             timezone.utc
         )
 
         period = self.period_var.get()
-
         country = self.country_var.get()
-
-        magnitude_filter = (
-            self.magnitude_var.get()
-        )
+        magnitude_filter = self.magnitude_var.get()
 
         # =====================================================
         # PERIOD
@@ -852,7 +1139,7 @@ class EarthquakeMonitor:
             )
 
         # =====================================================
-        # FILTER DATA
+        # FILTER EVENTS
         # =====================================================
 
         filtered = []
@@ -862,6 +1149,7 @@ class EarthquakeMonitor:
             timestamp = earthquake["timestamp"]
 
             if timestamp is None:
+
                 continue
 
             event_time = datetime.fromtimestamp(
@@ -869,25 +1157,33 @@ class EarthquakeMonitor:
                 tz=timezone.utc
             )
 
-            # PERIOD
+            # -------------------------------------------------
+            # TIME
+            # -------------------------------------------------
 
             if event_time < time_limit:
+
                 continue
 
+            # -------------------------------------------------
             # COUNTRY
+            # -------------------------------------------------
 
             if country != "ALL":
 
                 location = earthquake["location"]
 
                 if not location:
+
                     continue
 
                 if country.lower() not in location.lower():
 
                     continue
 
+            # -------------------------------------------------
             # MAGNITUDE
+            # -------------------------------------------------
 
             if not self.magnitude_matches_filter(
                 earthquake["magnitude"],
@@ -901,7 +1197,7 @@ class EarthquakeMonitor:
             )
 
         # =====================================================
-        # SORT NEWEST FIRST
+        # NEWEST FIRST
         # =====================================================
 
         filtered.sort(
@@ -911,7 +1207,7 @@ class EarthquakeMonitor:
         )
 
         # =====================================================
-        # INSERT ROWS
+        # INSERT ALL FILTERED EVENTS
         # =====================================================
 
         for earthquake in filtered:
@@ -922,7 +1218,9 @@ class EarthquakeMonitor:
                 timestamp / 1000
             )
 
+            # -------------------------------------------------
             # DEPTH
+            # -------------------------------------------------
 
             depth = earthquake["depth"]
 
@@ -934,7 +1232,9 @@ class EarthquakeMonitor:
 
                 depth_text = "N/A"
 
+            # -------------------------------------------------
             # MAGNITUDE
+            # -------------------------------------------------
 
             magnitude = earthquake["magnitude"]
 
@@ -946,11 +1246,17 @@ class EarthquakeMonitor:
 
                 magnitude_text = "N/A"
 
-            # COLOR
+            # -------------------------------------------------
+            # COLOR TAG
+            # -------------------------------------------------
 
             magnitude_tag = self.get_magnitude_tag(
                 magnitude
             )
+
+            # -------------------------------------------------
+            # INSERT ROW
+            # -------------------------------------------------
 
             self.tree.insert(
                 "",
