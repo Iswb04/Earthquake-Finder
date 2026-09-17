@@ -17,7 +17,7 @@ O objetivo do projeto é demonstrar o tratamento de fluxos de dados contínuos, 
       <p>Interface 1</p>
     </td>
     <td align="center" width="50%">
-     <img src="https://github.com/user-attachments/assets/2457a92c-ad51-4427-96bc-3fea051ff0d6" width="100%" alt="interface2">
+  <img width="1102" height="722" alt="interface2" src="https://github.com/user-attachments/assets/25e5507a-bc24-4d71-87f4-8da192da2a7c" alt="interface2">
       <p>Interface 2</p>
     </td>
   </tr>
@@ -54,5 +54,9 @@ python main.py
           src="https://custom-icon-badges.demolab.com/badge/LinkedIn-%2B500-%230A66C2?logo=linkedin&logoColor=white&style=for-the-badge&labelColor=0A66C2"
       />
 </a>
+
+
+
+
 
 
