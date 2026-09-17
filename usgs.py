@@ -1,30 +1,18 @@
 import requests
 
-
-# USGS feed containing the past 30 days
+# USGS 30 DAYS
 URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson"
 
-
 def fetch_earthquakes():
-
     try:
-
-        response = requests.get(
-            URL,
-            timeout=10
-        )
-
+        response = requests.get(URL, timeout=10)
         response.raise_for_status()
-
         data = response.json()
-
         earthquakes = []
 
         for event in data["features"]:
-
             properties = event["properties"]
             geometry = event["geometry"]
-
             coordinates = geometry["coordinates"]
 
             earthquakes.append({
@@ -38,9 +26,7 @@ def fetch_earthquakes():
             })
 
         return earthquakes
-
+        
     except requests.RequestException as error:
-
         print(f"API error: {error}")
-
         return []

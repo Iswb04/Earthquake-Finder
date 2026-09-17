@@ -2,3 +2,76 @@ pip install requests
 
 earthquake-monitor/ ├── main.py ├── usgs.py └── ui.py import tkinter as tk
 pip install -r requirements.txt
+
+
+
+Pipeline >>> -------------------------
+
+1. Gatilho: O ciclo automático (60s) ou o botão manual acionam a requisição. 
+2. Background: Uma thread paralela baixa os dados da API sem travar a tela.  
+3. Transferência: Os dados são enviados à interface de forma segura através de uma fila (queue).  
+4. Processamento: A interface resgata a fila e aplica os filtros do usuário.  
+5. Conclusão: A tabela é atualizada com os resultados e o timer é reiniciado.  
+
+
+
+Framework do Sistema >>> -------------------------
+
+main -> 
+    controlador: gerenciamento de ciclo de vida da aplicação, temporizador e execução de threads em 
+    segundo plano e a fila de dados que conecta a resposta da rede a interface gráfica.
+
+ui -> 
+    visão: tem a classe EarthquakeMonitor, responsável por renderizar os componentes do TKinter
+    e aplicar a lógica de filtros aos dados recebidos. 
+
+usgs ->
+    modelo de integração: isola a comunicação externa. Faz a requisição HTTPS para a API do USGS,
+    extrai os campos necessários do arquivo GeoJson e padroniza os dados.
+
+
+
+Tratamento de Dados >>> -------------------------
+
+1. extração e normalização: 
+    extrai apenas os campos necessarios da API, convertendo em uma lista de dicionários padronizados.
+
+2. filtragem: 
+    cruza a lista extraída com os filtros da interface removendo eventos que não se encaixam nos parametros.
+
+3. ordenação: 
+    os dados filtrados são reordenados cronologicamente utilizando o campo de timestamp.
+
+4. formatação de exibição: 
+    o ui.py converte o timestamp original (em milissegundos) para formato de data legivel e arredondando para 
+    apenas uma casa decimal.
+
+
+
+Comparação principal >>> -------------------------
+
+Monitor de Terremotos e Posse de Bola (Ao vivo)
+    A essência do pipeline é a mesma: proteger a tela principal para que ela nunca congele enquanto o sistema "pensa".
+! mesmo esqueleto lógico usado em gráficos esportivos ao vivo.
+
+1 - Fluxo de dados >>>
+
+* Terremoto: Usa thread separada para ir na internet e buscar o arquivo JSON em segundo plano. Enquanto a thread
+calcula os filtros, a tela continua responsiva com a resposta entregue por meio de uma fila.
+
+* Posse de Bola: Usa servidores com placas de vídeo dedicadas operando em segundo plano. Recebe o vídeo e atraves de visão 
+computacional mapeia os jogadores e a bola e o algoritmo calcula a porcentagem de posse, também enviando a resposta pra uma fila.
+
+
+2 - Output Visual >>>
+
+* Terremoto: A atualização visual é estática e ocorre em blocos a cada 60 segundos. (pq os servidores de lá tbm atualizam os dados nesse tempo)
+O aplicativo simplesmente apaga os dados antigos e redesenha o texto em uma tabela dentro de uma janela padrão de computador.
+
+* Posse de Bola: O sistema utiliza overlay para inserir os gráficos e cronômetros diretamente em cima da imagem 
+ao vivo do jogo, renderizando a tela dezenas de vezes por segundo na transmissão da TV.
+
+
+
+Resumo : Os dois seguem o mesmo ciclo de processamento contínuo capturando dados brutos de uma fonte, 
+filtrando as informações relevantes e formatando pra atualizar a interface visualmente em tempo real.
